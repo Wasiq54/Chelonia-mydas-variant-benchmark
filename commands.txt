@@ -1,0 +1,2 @@
+fastqc input_file1.fastq input_file2.fastq -o /media/beeu/DATA/fahad/DataofDNA/Ab-NormS2/commands.txt
+
