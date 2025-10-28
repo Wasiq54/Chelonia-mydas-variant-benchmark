@@ -1,2 +1,91 @@
-fastqc input_file1.fastq input_file2.fastq -o /media/beeu/DATA/fahad/DataofDNA/Ab-NormS2/commands.txt
+########################################
+# 1. QUALITY CONTROL (FastQC + MultiQC)
+########################################
+
+# Run FastQC on raw data (Normal and Abnormal)
+fastqc --threads 16 /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_1.fastq.gz /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_2.fastq.gz -o /media/work/New\ Volume1/DataofDNA/CH-NORMS1/FastqcReport
+fastqc --threads 16 /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_1.fastq.gz /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_2.fastq.gz -o /media/work/New\ Volume1/DataofDNA/Ab-NormS2/FastqcReport
+
+# Combine QC reports
+multiqc /media/work/New\ Volume1/DataofDNA/ -o /media/work/New\ Volume1/DataofDNA/summary/
+
+########################################
+# 2. TRIMMING (fastp)
+########################################
+
+fastp -i /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_1.fastq.gz \
+      -I /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_2.fastq.gz \
+      -o /media/work/New\ Volume1/DataofDNA/CH-NORMS1/trim/W1-A_1_trimmed.fastq.gz \
+      -O /media/work/New\ Volume1/DataofDNA/CH-NORMS1/trim/W1-A_2_trimmed.fastq.gz \
+      --detect_adapter_for_pe --thread 16 --html CH-NORMS1_fastp.html --json CH-NORMS1_fastp.json
+
+fastp -i /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_1.fastq.gz \
+      -I /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_2.fastq.gz \
+      -o /media/work/New\ Volume1/DataofDNA/Ab-NormS2/trim/S1_1_trimmed.fastq.gz \
+      -O /media/work/New\ Volume1/DataofDNA/Ab-NormS2/trim/S1_2_trimmed.fastq.gz \
+      --detect_adapter_for_pe --thread 16 --html Ab-NormS2_fastp.html --json Ab-NormS2_fastp.json
+
+########################################
+# 3. ALIGNMENT (BWA-MEM)
+########################################
+
+# Index reference genome
+bwa index /media/work/New\ Volume1/DataofDNA/reference_genome.fasta
+
+# Align reads and sort BAMs
+bwa mem -t 32 /media/work/New\ Volume1/DataofDNA/reference_genome.fasta \
+  /media/work/New\ Volume1/DataofDNA/CH-NORMS1/trim/W1-A_1_trimmed.fastq.gz \
+  /media/work/New\ Volume1/DataofDNA/CH-NORMS1/trim/W1-A_2_trimmed.fastq.gz | \
+  samtools sort -o /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam
+
+bwa mem -t 32 /media/work/New\ Volume1/DataofDNA/reference_genome.fasta \
+  /media/work/New\ Volume1/DataofDNA/Ab-NormS2/trim/S1_1_trimmed.fastq.gz \
+  /media/work/New\ Volume1/DataofDNA/Ab-NormS2/trim/S1_2_trimmed.fastq.gz | \
+  samtools sort -o /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_sorted.bam
+
+# Index BAMs
+samtools index /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam
+samtools index /media/work/New\ Volume1/DataofDNA/Ab-NormS2/S1_sorted.bam
+
+########################################
+# 4. VARIANT CALLING
+########################################
+
+# DeepVariant (example)
+run_deepvariant \
+  --model_type=WGS \
+  --ref=/media/work/New\ Volume1/DataofDNA/reference_genome.fasta \
+  --reads=/media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam \
+  --output_vcf=/media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_dv.vcf.gz \
+  --num_shards=16
+
+# GATK HaplotypeCaller
+gatk HaplotypeCaller \
+  -R /media/work/New\ Volume1/DataofDNA/reference_genome.fasta \
+  -I /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam \
+  -O /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_gatk.vcf.gz
+
+# FreeBayes
+freebayes -f /media/work/New\ Volume1/DataofDNA/reference_genome.fasta \
+  /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam > /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_freebayes.vcf
+
+# VarScan
+samtools mpileup -f /media/work/New\ Volume1/DataofDNA/reference_genome.fasta /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam | \
+  java -jar VarScan.jar mpileup2snp --output-vcf 1 > /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_varscan.vcf
+
+# BCFtools
+bcftools mpileup -Ou -f /media/work/New\ Volume1/DataofDNA/reference_genome.fasta /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_sorted.bam | \
+  bcftools call -mv -Oz -o /media/work/New\ Volume1/DataofDNA/CH-NORMS1/W1-A_bcftools.vcf.gz
+
+########################################
+# 5. VARIANT FILTERING (optional)
+########################################
+bcftools filter -e 'QUAL<30 || DP<10' -Oz -o filtered.vcf.gz unfiltered.vcf.gz
+tabix -p vcf filtered.vcf.gz
+
+########################################
+# 6. BENCHMARKING (RTG vcfeval)
+########################################
+rtg format -o ref.sdf /media/work/New\ Volume1/DataofDNA/reference_genome.fasta
+rtg vcfeval -b truth.vcf.gz -c filtered.vcf.gz -t ref.sdf -o vcfeval_output --vcf-score-field QUAL
 
