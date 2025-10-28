@@ -1,0 +1,141 @@
+################################################################################
+# STEP 2: READ TRIMMING (ALL TOOLS TESTED)
+# Dataset: Chelonia mydas (Normal: CH-NORMS1, Abnormal: Ab-NormS2)
+# Platform: Illumina NovaSeq 6000 | Paired-end 151 bp reads
+# Threads: 20 | Author: Wasiq Aslam
+################################################################################
+
+BASE="/media/fahad/7022BF6F46E38F25"
+RAW="$BASE/Data_of_DNA/orignial_data"
+OUT="$BASE/trimming"
+THREADS=20
+
+# Input files
+NORM_R1="$RAW/CH-NORMS1/W1-A_1.fastq.gz"
+NORM_R2="$RAW/CH-NORMS1/W1-A_2.fastq.gz"
+ABN_R1="$RAW/Ab-NormS2/S1_1.fastq.gz"
+ABN_R2="$RAW/Ab-NormS2/S1_2.fastq.gz"
+
+# Output directories
+mkdir -p "$OUT"/{fastp,trimmomatic,BBDuk,Trim_Galore,cutadapt}/{CH-NORMS1_trim,Ab-NormS2_trim} "$OUT/logs"
+
+################################################################################
+# TOOL 1: fastp (Selected as best-performing trimmer)
+################################################################################
+/usr/bin/time -v fastp \
+  -i "$NORM_R1" -I "$NORM_R2" \
+  -o "$OUT/fastp/CH-NORMS1_trim/W1-A_1_trimmed.fastq.gz" \
+  -O "$OUT/fastp/CH-NORMS1_trim/W1-A_2_trimmed.fastq.gz" \
+  --detect_adapter_for_pe --thread $THREADS \
+  --html "$OUT/fastp/CH-NORMS1_trim/fastp_report.html" \
+  --json "$OUT/fastp/CH-NORMS1_trim/fastp_report.json" \
+  2> "$OUT/logs/fastp_CH-NORMS1.time.txt"
+
+/usr/bin/time -v fastp \
+  -i "$ABN_R1" -I "$ABN_R2" \
+  -o "$OUT/fastp/Ab-NormS2_trim/S1_1_trimmed.fastq.gz" \
+  -O "$OUT/fastp/Ab-NormS2_trim/S1_2_trimmed.fastq.gz" \
+  --detect_adapter_for_pe --thread $THREADS \
+  --html "$OUT/fastp/Ab-NormS2_trim/fastp_report.html" \
+  --json "$OUT/fastp/Ab-NormS2_trim/fastp_report.json" \
+  2> "$OUT/logs/fastp_Ab-NormS2.time.txt"
+
+################################################################################
+# TOOL 2: Trimmomatic (adapter & quality trimming)
+################################################################################
+TRIMMO_JAR="$BASE/trimming/trimmomatic/Trimmomatic-0.39/trimmomatic-0.39.jar"
+ADAPTERS="$BASE/trimming/trimmomatic/Trimmomatic-0.39/adapters/TruSeq3-PE.fa"
+
+# CH-NORMS1
+/usr/bin/time -v java -Xmx16g -jar "$TRIMMO_JAR" PE \
+  -threads $THREADS \
+  "$NORM_R1" "$NORM_R2" \
+  "$OUT/trimmomatic/CH-NORMS1_trim/W1-A_1_paired.fastq.gz" \
+  "$OUT/trimmomatic/CH-NORMS1_trim/W1-A_1_unpaired.fastq.gz" \
+  "$OUT/trimmomatic/CH-NORMS1_trim/W1-A_2_paired.fastq.gz" \
+  "$OUT/trimmomatic/CH-NORMS1_trim/W1-A_2_unpaired.fastq.gz" \
+  ILLUMINACLIP:"$ADAPTERS":2:30:10 \
+  LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 \
+  2> "$OUT/logs/trimmomatic_CH-NORMS1.time.txt"
+
+# Ab-NormS2
+/usr/bin/time -v java -Xmx16g -jar "$TRIMMO_JAR" PE \
+  -threads $THREADS \
+  "$ABN_R1" "$ABN_R2" \
+  "$OUT/trimmomatic/Ab-NormS2_trim/S1_1_paired.fastq.gz" \
+  "$OUT/trimmomatic/Ab-NormS2_trim/S1_1_unpaired.fastq.gz" \
+  "$OUT/trimmomatic/Ab-NormS2_trim/S1_2_paired.fastq.gz" \
+  "$OUT/trimmomatic/Ab-NormS2_trim/S1_2_unpaired.fastq.gz" \
+  ILLUMINACLIP:"$ADAPTERS":2:30:10 \
+  LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 \
+  2> "$OUT/logs/trimmomatic_Ab-NormS2.time.txt"
+
+################################################################################
+# TOOL 3: BBDuk (BBMap suite)
+################################################################################
+BBDUK="$BASE/trimming/BBDuk/bbmap/bbduk.sh"
+BBDUK_REF="$BASE/trimming/BBDuk/adapters.fa"
+
+# CH-NORMS1
+/usr/bin/time -v "$BBDUK" \
+  in1="$NORM_R1" in2="$NORM_R2" \
+  out1="$OUT/BBDuk/CH-NORMS1_trim/W1-A_1_trimmed.fastq.gz" \
+  out2="$OUT/BBDuk/CH-NORMS1_trim/W1-A_2_trimmed.fastq.gz" \
+  ref="$BBDUK_REF" ktrim=r k=23 mink=11 hdist=1 qtrim=r trimq=20 minlength=36 t=$THREADS \
+  2> "$OUT/logs/bbduk_CH-NORMS1.time.txt"
+
+# Ab-NormS2
+/usr/bin/time -v "$BBDUK" \
+  in1="$ABN_R1" in2="$ABN_R2" \
+  out1="$OUT/BBDuk/Ab-NormS2_trim/S1_1_trimmed.fastq.gz" \
+  out2="$OUT/BBDuk/Ab-NormS2_trim/S1_2_trimmed.fastq.gz" \
+  ref="$BBDUK_REF" ktrim=r k=23 mink=11 hdist=1 qtrim=r trimq=20 minlength=36 t=$THREADS \
+  2> "$OUT/logs/bbduk_Ab-NormS2.time.txt"
+
+################################################################################
+# TOOL 4: Trim Galore (Cutadapt-based)
+################################################################################
+TRIMG="/home/fahad/miniconda3/bin/trim_galore"
+
+# CH-NORMS1
+/usr/bin/time -v "$TRIMG" --paired --cores $THREADS \
+  -o "$OUT/Trim_Galore/CH-NORMS1_trim" \
+  "$NORM_R1" "$NORM_R2" \
+  2> "$OUT/logs/trim_galore_CH-NORMS1.time.txt"
+
+# Ab-NormS2
+/usr/bin/time -v "$TRIMG" --paired --cores $THREADS \
+  -o "$OUT/Trim_Galore/Ab-NormS2_trim" \
+  "$ABN_R1" "$ABN_R2" \
+  2> "$OUT/logs/trim_galore_Ab-NormS2.time.txt"
+
+################################################################################
+# TOOL 5: Cutadapt (Direct adapter trimming)
+################################################################################
+ADAPT="AGATCGGAAGAGC"
+
+/usr/bin/time -v cutadapt \
+  -a $ADAPT -A $ADAPT \
+  -o "$OUT/cutadapt/CH-NORMS1_trim/W1-A_1_trimmed.fastq.gz" \
+  -p "$OUT/cutadapt/CH-NORMS1_trim/W1-A_2_trimmed.fastq.gz" \
+  --cores $THREADS \
+  "$NORM_R1" "$NORM_R2" \
+  2> "$OUT/logs/cutadapt_CH-NORMS1.time.txt"
+
+/usr/bin/time -v cutadapt \
+  -a $ADAPT -A $ADAPT \
+  -o "$OUT/cutadapt/Ab-NormS2_trim/S1_1_trimmed.fastq.gz" \
+  -p "$OUT/cutadapt/Ab-NormS2_trim/S1_2_trimmed.fastq.gz" \
+  --cores $THREADS \
+  "$ABN_R1" "$ABN_R2" \
+  2> "$OUT/logs/cutadapt_Ab-NormS2.time.txt"
+
+################################################################################
+# QUALITY CHECK (FastQC + MultiQC after trimming)
+################################################################################
+/usr/bin/time -v fastqc --threads $THREADS \
+  "$OUT/fastp/CH-NORMS1_trim/"*.fastq.gz \
+  "$OUT/fastp/Ab-NormS2_trim/"*.fastq.gz \
+  -o "$OUT/FastqcReport"
+
+/usr/bin/time -v multiqc "$OUT" -o "$OUT/multiqc_post_trim"
