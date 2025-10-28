@@ -1,0 +1,137 @@
+################################################################################
+# STEP 4: VARIANT CALLING COMMANDS (BWA-SORTED BAMS)
+# Reference: /media/beeu/DATA/fahad/Reference/Reference.fasta
+# Normal BAM:   /media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam
+# Abnormal BAM: /media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam
+################################################################################
+
+# ---- 0) PREP (run once) ------------------------------------------------------
+samtools faidx "/media/beeu/DATA/fahad/Reference/Reference.fasta"
+
+gatk CreateSequenceDictionary \
+  -R "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  -O "/media/beeu/DATA/fahad/Reference/Reference.dict"
+
+samtools index "/media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam"
+samtools index "/media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam"
+
+mkdir -p \
+  "/media/beeu/DATA/fahad/Variants/DeepVariant" \
+  "/media/beeu/DATA/fahad/Variants/GATK" \
+  "/media/beeu/DATA/fahad/Variants/BCFtools" \
+  "/media/beeu/DATA/fahad/Variants/VarScan" \
+  "/media/beeu/DATA/fahad/Variants/FreeBayes"
+
+# ---- 1) DEEPVARIANT (Docker). Uses mounted ref + BAM dirs --------------------
+# Mount reference as /ref, BAM folder as /bam, and output as /out inside container.
+
+# NORMAL
+sudo docker run --rm \
+  -v "/media/beeu/DATA/fahad/Reference":/ref \
+  -v "/media/beeu/DATA/fahad/paper/Alignment/BWA":/bam \
+  -v "/media/beeu/DATA/fahad/Variants/DeepVariant":/out \
+  google/deepvariant:1.9.0 \
+  /opt/deepvariant/bin/run_deepvariant \
+  --model_type=WGS \
+  --ref=/ref/Reference.fasta \
+  --reads=/bam/CH-NORMS1_bwa_sorted.bam \
+  --output_vcf=/out/CH-NORMS1_deepvariant.vcf.gz \
+  --output_gvcf=/out/CH-NORMS1_deepvariant.g.vcf.gz \
+  --num_shards=20 \
+  --intermediate_results_dir=/out/intermediates_normal \
+  --logging_dir=/out/logs_normal \
+  --make_examples_extra_args="small_model_call_multiallelics=false"
+
+# ABNORMAL
+sudo docker run --rm \
+  -v "/media/beeu/DATA/fahad/Reference":/ref \
+  -v "/media/beeu/DATA/fahad/paper/Alignment/BWA":/bam \
+  -v "/media/beeu/DATA/fahad/Variants/DeepVariant":/out \
+  google/deepvariant:1.9.0 \
+  /opt/deepvariant/bin/run_deepvariant \
+  --model_type=WGS \
+  --ref=/ref/Reference.fasta \
+  --reads=/bam/Ab-NormS2_bwa_sorted.bam \
+  --output_vcf=/out/Ab-NormS2_deepvariant.vcf.gz \
+  --output_gvcf=/out/Ab-NormS2_deepvariant.g.vcf.gz \
+  --num_shards=20 \
+  --intermediate_results_dir=/out/intermediates_abnormal \
+  --logging_dir=/out/logs_abnormal \
+  --make_examples_extra_args="small_model_call_multiallelics=false"
+
+# ---- 2) GATK HAPLOTYPECALLER (GVCF mode) -------------------------------------
+
+gatk --java-options "-Xmx64g" HaplotypeCaller \
+  -R "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  -I "/media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam" \
+  -O "/media/beeu/DATA/fahad/Variants/GATK/CH-NORMS1.g.vcf.gz" \
+  -ERC GVCF
+
+gatk --java-options "-Xmx64g" HaplotypeCaller \
+  -R "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  -I "/media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam" \
+  -O "/media/beeu/DATA/fahad/Variants/GATK/Ab-NormS2.g.vcf.gz" \
+  -ERC GVCF
+
+# (optional) Genotype to VCFs
+gatk --java-options "-Xmx32g" GenotypeGVCFs \
+  -R "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  -V "/media/beeu/DATA/fahad/Variants/GATK/CH-NORMS1.g.vcf.gz" \
+  -O "/media/beeu/DATA/fahad/Variants/GATK/CH-NORMS1.vcf.gz"
+
+gatk --java-options "-Xmx32g" GenotypeGVCFs \
+  -R "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  -V "/media/beeu/DATA/fahad/Variants/GATK/Ab-NormS2.g.vcf.gz" \
+  -O "/media/beeu/DATA/fahad/Variants/GATK/Ab-NormS2.vcf.gz"
+
+# ---- 3) BCFTOOLS CALLING ------------------------------------------------------
+
+bcftools mpileup --threads 16 -Ou -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam" \
+  | bcftools call --threads 16 -mv -Oz -o "/media/beeu/DATA/fahad/Variants/BCFtools/CH-NORMS1.vcf.gz"
+
+bcftools index --threads 16 "/media/beeu/DATA/fahad/Variants/BCFtools/CH-NORMS1.vcf.gz"
+
+bcftools mpileup --threads 16 -Ou -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam" \
+  | bcftools call --threads 16 -mv -Oz -o "/media/beeu/DATA/fahad/Variants/BCFtools/Ab-NormS2.vcf.gz"
+
+bcftools index --threads 16 "/media/beeu/DATA/fahad/Variants/BCFtools/Ab-NormS2.vcf.gz"
+
+# ---- 4) VARSCAN ---------------------------------------------------------------
+
+samtools mpileup -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" -q 30 -Q 20 -B \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam" \
+  | varscan mpileup2cns --min-coverage 10 --min-avg-qual 20 --p-value 0.05 --variants --output-vcf 1 \
+  > "/media/beeu/DATA/fahad/Variants/VarScan/CH-NORMS1.varscan.vcf"
+
+bgzip -f "/media/beeu/DATA/fahad/Variants/VarScan/CH-NORMS1.varscan.vcf"
+tabix -f -p vcf "/media/beeu/DATA/fahad/Variants/VarScan/CH-NORMS1.varscan.vcf.gz"
+
+samtools mpileup -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" -q 30 -Q 20 -B \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam" \
+  | varscan mpileup2cns --min-coverage 10 --min-avg-qual 20 --p-value 0.05 --variants --output-vcf 1 \
+  > "/media/beeu/DATA/fahad/Variants/VarScan/Ab-NormS2.varscan.vcf"
+
+bgzip -f "/media/beeu/DATA/fahad/Variants/VarScan/Ab-NormS2.varscan.vcf"
+tabix -f -p vcf "/media/beeu/DATA/fahad/Variants/VarScan/Ab-NormS2.varscan.vcf.gz"
+
+# ---- 5) FREEBAYES -------------------------------------------------------------
+
+freebayes -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/CH-NORMS1_bwa_sorted.bam" \
+  > "/media/beeu/DATA/fahad/Variants/FreeBayes/CH-NORMS1.vcf"
+
+bgzip -f "/media/beeu/DATA/fahad/Variants/FreeBayes/CH-NORMS1.vcf"
+tabix -f -p vcf "/media/beeu/DATA/fahad/Variants/FreeBayes/CH-NORMS1.vcf.gz"
+
+freebayes -f "/media/beeu/DATA/fahad/Reference/Reference.fasta" \
+  "/media/beeu/DATA/fahad/paper/Alignment/BWA/Ab-NormS2_bwa_sorted.bam" \
+  > "/media/beeu/DATA/fahad/Variants/FreeBayes/Ab-NormS2.vcf"
+
+bgzip -f "/media/beeu/DATA/fahad/Variants/FreeBayes/Ab-NormS2.vcf"
+tabix -f -p vcf "/media/beeu/DATA/fahad/Variants/FreeBayes/Ab-NormS2.vcf.gz"
+
+################################################################################
+# END
+################################################################################
