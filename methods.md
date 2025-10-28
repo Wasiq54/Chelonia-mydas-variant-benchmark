@@ -1,13 +1,25 @@
 <img width="591" height="170" alt="image" src="https://github.com/user-attachments/assets/1b8cb5ae-d194-4b46-9904-fe9242839a8e" /># Methods (Tools, Versions, Commands)
 
-## Tools & versions (fill exact numbers you used)
-- DeepVariant v1.x.x
-- GATK v4.x.x
-- FreeBayes v1.3.x
-- VarScan v2.4.x
-- BCFtools v1.xx
-- BWA-MEM v0.7.17; Bowtie2 v2.5.x; Minimap2 v2.2x
-- RTG Tools v3.12.1; FastQC v0.11.9; MultiQC v1.15; fastp v0.23.x; seqkit v2.x
+
+##Software and Tool Versions
+------------------------------------------------------------
+All analyses were performed using the latest stable releases (as of 2025) in isolated Conda or Docker environments to ensure reproducibility.  
+The complete list of tools and their versions is as follows:
+
+- DeepVariant v1.9.0  
+- GATK v4.6.2.0 (includes Picard v3.4.0 and HTSJDK v4.2.0)  
+- FreeBayes v1.3.10  
+- VarScan v2.4.6  
+- BCFtools v1.22 (with HTSlib v1.22.1)  
+- Samtools v1.22.1  
+- BWA-MEM v0.7.17  
+- Bowtie2 v2.5.2  
+- Minimap2 v2.28  
+- RTG Tools v3.12.1  
+- FastQC v0.11.9  
+- MultiQC v1.15  
+- fastp v0.26.0  
+- seqkit v2.8.2
 
 ## QC
 fastqc --threads 16 W1-A_1.fastq.gz W1-A_2.fastq.gz -o CH-NORMS1/FastqcReport
@@ -76,19 +88,6 @@ Five variant calling tools were used to detect SNPs and indels from BWA-MEM–al
 DeepVariant v1.9.0, GATK v4.6.2.0, FreeBayes v1.3.10, VarScan v2.4.6, and BCFtools v1.22.
 Each tool was executed on both normal and abnormal Chelonia mydas datasets using the same reference genome (rCheMyd1.pri.v2).
 Command-line parameters for reproducibility are provided in scripts/commands_variant_calling.txt.
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
