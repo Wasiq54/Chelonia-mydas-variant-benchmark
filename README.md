@@ -12,7 +12,8 @@ This repo contains all steps & scripts for:
 
 ## Workflow (high level)
 1) QC: FastQC + MultiQC
-2) (Optional) Trim: fastp
+2)- Main trimmer used: fastp (v0.26.0)
+- All trimming commands: scripts/commands_trimming_all_tools.txt
 3) Align: BWA-MEM (and Bowtie2/Minimap2 for comparison)
 4) Call variants: DeepVariant, GATK, FreeBayes, VarScan, BCFtools
 5) Evaluate: RTG vcfeval (+ tables & plots)
