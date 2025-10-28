@@ -1,0 +1,15 @@
+*.fastq
+*.fastq.gz
+*.bam
+*.cram
+*.bai
+*.crai
+*.vcf
+*.vcf.gz
+*.tbi
+results/
+logs/
+tmp/
+*.log
+*.zip
+*.tar.gz
