@@ -1,0 +1,425 @@
+
+######################################
+# FULL PIPELINE RECORD FOR NORMAL + ABNORMAL DATASETS
+# Chelonia mydas Variant Calling Pipeline
+
+######################################
+
+# ======== DIRECTORIES ========
+# Normal normalized folder:
+# ~/Desktop/variants/ref_variants/normal_vcfs_normalized
+
+# Abnormal normalized folder:
+# ~/Desktop/variants/ref_variants/abnormal_vcfs_normalized
+
+# Reference genome:
+# /media/work/New Volume1/Reference/Reference.fasta
+
+# =============================
+# STEP 1: SORT RAW VCF FILES
+# =============================
+
+# Normal
+bcftools sort BCf_Normal.vcf.gz -Oz -o BCFtools_Normal_sorted.vcf.gz
+bcftools sort Dee0pVaraint__NORM_Sorted_output.vcf.gz -Oz -o DeepVariant_Normal_sorted.vcf.gz
+bcftools sort Freebays_CH-NORMS1_filtered_variants.vcf.gz -Oz -o FreeBayes_Normal_sorted.vcf.gz
+bcftools sort Gatk_CH-NORMS1_filtered_variants.vcf.gz -Oz -o GATK_Normal_sorted.vcf.gz
+
+# Abnormal
+bcftools sort BCf__Ab-NormS2_variants.vcf.gz -Oz -o BCFtools_Abnorm_sorted.vcf.gz
+bcftools sort DeepVaraint_Abnorm_sorted_output.vcf.gz -Oz -o DeepVariant_Abnorm_sorted.vcf.gz
+bcftools sort Freebays_Ab-NormS2_filtered_variants.vcf.gz -Oz -o FreeBayes_Abnorm_sorted.vcf.gz
+bcftools sort gatk_Ab-NormS2_filtered_variants.vcf.gz -Oz -o GATK_Abnorm_sorted.vcf.gz
+
+# =============================
+# STEP 2: INDEX SORTED VCF FILES
+# =============================
+
+# Normal
+bcftools index BCFtools_Normal_sorted.vcf.gz
+bcftools index DeepVariant_Normal_sorted.vcf.gz
+bcftools index FreeBayes_Normal_sorted.vcf.gz
+bcftools index GATK_Normal_sorted.vcf.gz
+
+# Abnormal
+bcftools index BCFtools_Abnorm_sorted.vcf.gz
+bcftools index DeepVariant_Abnorm_sorted.vcf.gz
+bcftools index FreeBayes_Abnorm_sorted.vcf.gz
+bcftools index GATK_Abnorm_sorted.vcf.gz
+
+# =============================
+# STEP 3: NORMALIZE VCF FILES
+# =============================
+
+# Normal
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" BCFtools_Normal_sorted.vcf.gz -Oz -o BCFtools_Normal_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" DeepVariant_Normal_sorted.vcf.gz -Oz -o DeepVariant_Normal_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" FreeBayes_Normal_sorted.vcf.gz -Oz -o FreeBayes_Normal_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" GATK_Normal_sorted.vcf.gz -Oz -o GATK_Normal_normalized.vcf.gz
+
+# Abnormal
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" BCFtools_Abnorm_sorted.vcf.gz -Oz -o BCFtools_Abnorm_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" DeepVariant_Abnorm_sorted.vcf.gz -Oz -o DeepVariant_Abnorm_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" FreeBayes_Abnorm_sorted.vcf.gz -Oz -o FreeBayes_Abnorm_normalized.vcf.gz
+bcftools norm -m -both -f "/media/work/New Volume1/Reference/Reference.fasta" GATK_Abnorm_sorted.vcf.gz -Oz -o GATK_Abnorm_normalized.vcf.gz
+
+# =============================
+# STEP 4: INDEX NORMALIZED FILES
+# =============================
+
+# Normal
+bcftools index BCFtools_Normal_normalized.vcf.gz
+bcftools index DeepVariant_Normal_normalized.vcf.gz
+bcftools index FreeBayes_Normal_normalized.vcf.gz
+bcftools index GATK_Normal_normalized.vcf.gz
+
+# Abnormal
+bcftools index BCFtools_Abnorm_normalized.vcf.gz
+bcftools index DeepVariant_Abnorm_normalized.vcf.gz
+bcftools index FreeBayes_Abnorm_normalized.vcf.gz
+bcftools index GATK_Abnorm_normalized.vcf.gz
+
+# =============================
+# STEP 5: INTERSECTIONS (NORMAL)
+# =============================
+
+cd ~/Desktop/variants/ref_variants/normal_vcfs_normalized
+
+# 3+ intersection
+bcftools isec -n +3 -p ../consensus_normal_isec3 \
+  BCFtools_Normal_normalized.vcf.gz \
+  DeepVariant_Normal_normalized.vcf.gz \
+  FreeBayes_Normal_normalized.vcf.gz \
+  GATK_Normal_normalized.vcf.gz \
+  varscan_Normal_normalized.vcf.gz
+
+# 4+ intersection
+bcftools isec -n +4 -p ../consensus_normal_isec4 \
+  BCFtools_Normal_normalized.vcf.gz \
+  DeepVariant_Normal_normalized.vcf.gz \
+  FreeBayes_Normal_normalized.vcf.gz \
+  GATK_Normal_normalized.vcf.gz \
+  varscan_Normal_normalized.vcf.gz
+
+# 5+ intersection
+bcftools isec -n +5 -p ../consensus_normal_isec5 \
+  BCFtools_Normal_normalized.vcf.gz \
+  DeepVariant_Normal_normalized.vcf.gz \
+  FreeBayes_Normal_normalized.vcf.gz \
+  GATK_Normal_normalized.vcf.gz \
+  varscan_Normal_normalized.vcf.gz
+
+# =============================
+# STEP 6: INTERSECTIONS (ABNORMAL)
+# =============================
+
+cd ~/Desktop/variants/ref_variants/abnormal_vcfs_normalized
+
+# 3+ intersection
+bcftools isec -n +3 -p ../consensus_abnormal_isec3 \
+  BCFtools_Abnorm_normalized.vcf.gz \
+  DeepVariant_Abnorm_normalized.vcf.gz \
+  FreeBayes_Abnorm_normalized.vcf.gz \
+  GATK_Abnorm_normalized.vcf.gz \
+  varscan_Abnorm_normalized.vcf.gz
+
+# 4+ intersection
+bcftools isec -n +4 -p ../consensus_abnormal_isec4 \
+  BCFtools_Abnorm_normalized.vcf.gz \
+  DeepVariant_Abnorm_normalized.vcf.gz \
+  FreeBayes_Abnorm_normalized.vcf.gz \
+  GATK_Abnorm_normalized.vcf.gz \
+  varscan_Abnorm_normalized.vcf.gz
+
+# 5+ intersection
+bcftools isec -n +5 -p ../consensus_abnormal_isec5 \
+  BCFtools_Abnorm_normalized.vcf.gz \
+  DeepVariant_Abnorm_normalized.vcf.gz \
+  FreeBayes_Abnorm_normalized.vcf.gz \
+  GATK_Abnorm_normalized.vcf.gz \
+  varscan_Abnorm_normalized.vcf.gz
+
+
+
+
+#########################################
+# Manual Commands for Normal Dataset Filtering and abnormal
+# Using normal intersections (3+, 4+, 5+)
+
+##########################################
+
+# ---------- SETUP ----------
+# Define directories
+NORMAL_VCF_DIR="/home/work/Desktop/variants/ref_variants/normal_vcfs_normalized"
+TRUTHSET_DIR="/home/work/Desktop/variants/ref_variants/normal_truth_set"
+NORMAL_SNVS_DIR="/home/work/Desktop/variants/ref_variants/consensus_normal_isec_5tools"
+
+# Create output folders
+mkdir -p "$TRUTHSET_DIR/normal_output_snvs3"
+mkdir -p "$TRUTHSET_DIR/normal_output_snvs4"
+mkdir -p "$TRUTHSET_DIR/normal_output_snvs5"
+
+# ---------- 3+ INTERSECTION ----------
+# Filter using normal_output_snvs3/sites.txt
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs3/sites.txt" "$NORMAL_VCF_DIR/BCFtools_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs3/BCFtools_Normal_normal_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs3/BCFtools_Normal_normal_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs3/sites.txt" "$NORMAL_VCF_DIR/DeepVariant_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs3/DeepVariant_Normal_normal_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs3/DeepVariant_Normal_normal_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs3/sites.txt" "$NORMAL_VCF_DIR/FreeBayes_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs3/FreeBayes_Normal_normal_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs3/FreeBayes_Normal_normal_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs3/sites.txt" "$NORMAL_VCF_DIR/GATK_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs3/GATK_Normal_normal_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs3/GATK_Normal_normal_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs3/sites.txt" "$NORMAL_VCF_DIR/varscan_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs3/varscan_Normal_normal_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs3/varscan_Normal_normal_output_snvs3_filtered.vcf.gz"
+
+# ---------- 4+ INTERSECTION ----------
+# Filter using normal_output_snvs4/sites.txt
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs4/sites.txt" "$NORMAL_VCF_DIR/BCFtools_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs4/BCFtools_Normal_normal_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs4/BCFtools_Normal_normal_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs4/sites.txt" "$NORMAL_VCF_DIR/DeepVariant_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs4/DeepVariant_Normal_normal_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs4/DeepVariant_Normal_normal_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs4/sites.txt" "$NORMAL_VCF_DIR/FreeBayes_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs4/FreeBayes_Normal_normal_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs4/FreeBayes_Normal_normal_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs4/sites.txt" "$NORMAL_VCF_DIR/GATK_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs4/GATK_Normal_normal_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs4/GATK_Normal_normal_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs4/sites.txt" "$NORMAL_VCF_DIR/varscan_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs4/varscan_Normal_normal_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs4/varscan_Normal_normal_output_snvs4_filtered.vcf.gz"
+
+# ---------- 5+ INTERSECTION ----------
+# Filter using normal_output_snvs5/sites.txt
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs5/sites.txt" "$NORMAL_VCF_DIR/BCFtools_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs5/BCFtools_Normal_normal_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs5/BCFtools_Normal_normal_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs5/sites.txt" "$NORMAL_VCF_DIR/DeepVariant_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs5/DeepVariant_Normal_normal_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs5/DeepVariant_Normal_normal_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs5/sites.txt" "$NORMAL_VCF_DIR/FreeBayes_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs5/FreeBayes_Normal_normal_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs5/FreeBayes_Normal_normal_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs5/sites.txt" "$NORMAL_VCF_DIR/GATK_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs5/GATK_Normal_normal_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs5/GATK_Normal_normal_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$NORMAL_SNVS_DIR/normal_output_snvs5/sites.txt" "$NORMAL_VCF_DIR/varscan_Normal_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/normal_output_snvs5/varscan_Normal_normal_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/normal_output_snvs5/varscan_Normal_normal_output_snvs5_filtered.vcf.gz"
+
+##########################################
+# END OF COMMAND SET
+##########################################
+
+
+
+
+##########################################
+# Manual Commands for Abnormal Dataset Filtering
+# Using abnormal intersections (3+, 4+, 5+)
+# Author: Prepared for Wasiq Aslam
+# Date: [Your Date Here]
+##########################################
+
+# ---------- SETUP ----------
+# Define directories
+ABNORMAL_VCF_DIR="/home/work/Desktop/variants/ref_variants/abnormal_vcfs_normalized"
+TRUTHSET_DIR="/home/work/Desktop/variants/ref_variants/abNormal_truthset"
+ABNORMAL_SNVS_DIR="/home/work/Desktop/variants/ref_variants/consensus_abnormal_isec_5tools"
+
+# Create output folders
+mkdir -p "$TRUTHSET_DIR/abnormal_output_snvs3"
+mkdir -p "$TRUTHSET_DIR/abnormal_output_snvs4"
+mkdir -p "$TRUTHSET_DIR/abnormal_output_snvs5"
+
+# ---------- 3+ INTERSECTION ----------
+# Filter using abnormal_output_snvs3/sites.txt
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs3/sites.txt" "$ABNORMAL_VCF_DIR/BCFtools_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs3/BCFtools_Abnorm_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs3/BCFtools_Abnorm_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs3/sites.txt" "$ABNORMAL_VCF_DIR/DeepVariant_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs3/DeepVariant_Abnorm_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs3/DeepVariant_Abnorm_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs3/sites.txt" "$ABNORMAL_VCF_DIR/FreeBayes_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs3/FreeBayes_Abnorm_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs3/FreeBayes_Abnorm_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs3/sites.txt" "$ABNORMAL_VCF_DIR/GATK_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs3/GATK_Abnorm_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs3/GATK_Abnorm_output_snvs3_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs3/sites.txt" "$ABNORMAL_VCF_DIR/varscan_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs3/varscan_Abnorm_output_snvs3_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs3/varscan_Abnorm_output_snvs3_filtered.vcf.gz"
+
+# ---------- 4+ INTERSECTION ----------
+# Filter using abnormal_output_snvs4/sites.txt
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs4/sites.txt" "$ABNORMAL_VCF_DIR/BCFtools_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs4/BCFtools_Abnorm_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs4/BCFtools_Abnorm_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs4/sites.txt" "$ABNORMAL_VCF_DIR/DeepVariant_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs4/DeepVariant_Abnorm_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs4/DeepVariant_Abnorm_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs4/sites.txt" "$ABNORMAL_VCF_DIR/FreeBayes_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs4/FreeBayes_Abnorm_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs4/FreeBayes_Abnorm_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs4/sites.txt" "$ABNORMAL_VCF_DIR/GATK_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs4/GATK_Abnorm_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs4/GATK_Abnorm_output_snvs4_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs4/sites.txt" "$ABNORMAL_VCF_DIR/varscan_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs4/varscan_Abnorm_output_snvs4_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs4/varscan_Abnorm_output_snvs4_filtered.vcf.gz"
+
+# ---------- 5+ INTERSECTION ----------
+# Filter using abnormal_output_snvs5/sites.txt
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs5/sites.txt" "$ABNORMAL_VCF_DIR/BCFtools_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs5/BCFtools_Abnorm_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/BCFtools_Abnorm_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs5/sites.txt" "$ABNORMAL_VCF_DIR/DeepVariant_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs5/DeepVariant_Abnorm_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/DeepVariant_Abnorm_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs5/sites.txt" "$ABNORMAL_VCF_DIR/FreeBayes_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs5/FreeBayes_Abnorm_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/FreeBayes_Abnorm_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs5/sites.txt" "$ABNORMAL_VCF_DIR/GATK_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs5/GATK_Abnorm_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/GATK_Abnorm_output_snvs5_filtered.vcf.gz"
+
+bcftools view -R "$ABNORMAL_SNVS_DIR/abnormal_output_snvs5/sites.txt" "$ABNORMAL_VCF_DIR/varscan_Abnorm_normalized.vcf.gz" -Oz -o "$TRUTHSET_DIR/abnormal_output_snvs5/varscan_Abnorm_output_snvs5_filtered.vcf.gz"
+bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/varscan_Abnorm_output_snvs5_filtered.vcf.gz"
+
+##########################################
+# END OF COMMAND SET
+##########################################
+
+
+
+
+
+
+# ✅ Create SDF for reference genome
+rtg format \
+  -o /home/work/Desktop/variants/ref_variants/reference.sdf \
+  "/media/work/New Volume1/Reference/Reference.fasta"
+
+
+
+
+# ------------------ SNVs3 ------------------
+echo "=== Running BCFtools SNVs3 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs3/BCFtools_Normal_normal_output_snvs3_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/BCFtools_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/BCFtools_snvs3
+
+echo "=== Running DeepVariant SNVs3 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs3/DeepVariant_Normal_normal_output_snvs3_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/DeepVariant_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/DeepVariant_snvs3
+
+echo "=== Running FreeBayes SNVs3 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs3/FreeBayes_Normal_normal_output_snvs3_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/FreeBayes_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/FreeBayes_snvs3
+
+echo "=== Running GATK SNVs3 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs3/GATK_Normal_normal_output_snvs3_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/GATK_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/GATK_snvs3
+
+echo "=== Running VarScan SNVs3 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs3/varscan_Normal_normal_output_snvs3_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/varscan_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/VarScan_snvs3
+
+# ------------------ SNVs4 ------------------
+echo "=== Running BCFtools SNVs4 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs4/BCFtools_Normal_normal_output_snvs4_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/BCFtools_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/BCFtools_snvs4
+
+echo "=== Running DeepVariant SNVs4 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs4/DeepVariant_Normal_normal_output_snvs4_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/DeepVariant_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/DeepVariant_snvs4
+
+echo "=== Running FreeBayes SNVs4 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs4/FreeBayes_Normal_normal_output_snvs4_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/FreeBayes_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/FreeBayes_snvs4
+
+echo "=== Running GATK SNVs4 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs4/GATK_Normal_normal_output_snvs4_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/GATK_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/GATK_snvs4
+
+echo "=== Running VarScan SNVs4 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs4/varscan_Normal_normal_output_snvs4_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/varscan_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/VarScan_snvs4
+
+# ------------------ SNVs5 ------------------
+echo "=== Running BCFtools SNVs5 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs5/BCFtools_Normal_normal_output_snvs5_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/BCFtools_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/BCFtools_snvs5
+
+echo "=== Running DeepVariant SNVs5 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs5/DeepVariant_Normal_normal_output_snvs5_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/DeepVariant_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/DeepVariant_snvs5
+
+echo "=== Running FreeBayes SNVs5 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs5/FreeBayes_Normal_normal_output_snvs5_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/FreeBayes_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/FreeBayes_snvs5
+
+echo "=== Running GATK SNVs5 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs5/GATK_Normal_normal_output_snvs5_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/GATK_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/GATK_snvs5
+
+echo "=== Running VarScan SNVs5 ==="
+rtg vcfeval -b /home/work/Desktop/variants/ref_variants/normal_truth_set/normal_output_snvs5/varscan_Normal_normal_output_snvs5_filtered.vcf.gz -c /home/work/Desktop/variants/ref_variants/normal_vcfs_normalized/varscan_Normal_normalized.vcf.gz -t /home/work/Desktop/variants/ref_variants/reference.sdf -o /home/work/Desktop/variants/ref_variants/RTG_truth/VarScan_snvs5
+
+
+
+
+abnormal
+
+
+for f in *.vcf.gz; do
+  bcftools index --tbi "$f"
+done
+
+
+
+# Define base paths
+BASE_TRUTH="/home/work/Desktop/variants/ref_variants/abNormal_truthset"
+BASE_VCFS="/home/work/Desktop/variants/ref_variants/abnormal_vcfs_normalized"
+BASE_OUT="/home/work/Desktop/variants/ref_variants/rtg_eval_abnormal"
+REF="/home/work/Desktop/variants/ref_variants/reference.sdf"
+
+# SNVs3
+echo "=== Running BCFtools SNVs3 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs3/BCFtools_Abnorm_output_snvs3_filtered.vcf.gz -c $BASE_VCFS/BCFtools_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/BCFtools_snvs3
+
+echo "=== Running DeepVariant SNVs3 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs3/DeepVariant_Abnorm_output_snvs3_filtered.vcf.gz -c $BASE_VCFS/DeepVariant_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/DeepVariant_snvs3
+
+echo "=== Running FreeBayes SNVs3 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs3/FreeBayes_Abnorm_output_snvs3_filtered.vcf.gz -c $BASE_VCFS/FreeBayes_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/FreeBayes_snvs3
+
+echo "=== Running GATK SNVs3 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs3/GATK_Abnorm_output_snvs3_filtered.vcf.gz -c $BASE_VCFS/GATK_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/GATK_snvs3
+
+echo "=== Running VarScan SNVs3 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs3/varscan_Abnorm_output_snvs3_filtered.vcf.gz -c $BASE_VCFS/varscan_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/VarScan_snvs3
+
+# SNVs4
+echo "=== Running BCFtools SNVs4 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs4/BCFtools_Abnorm_output_snvs4_filtered.vcf.gz -c $BASE_VCFS/BCFtools_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/BCFtools_snvs4
+
+echo "=== Running DeepVariant SNVs4 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs4/DeepVariant_Abnorm_output_snvs4_filtered.vcf.gz -c $BASE_VCFS/DeepVariant_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/DeepVariant_snvs4
+
+echo "=== Running FreeBayes SNVs4 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs4/FreeBayes_Abnorm_output_snvs4_filtered.vcf.gz -c $BASE_VCFS/FreeBayes_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/FreeBayes_snvs4
+
+echo "=== Running GATK SNVs4 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs4/GATK_Abnorm_output_snvs4_filtered.vcf.gz -c $BASE_VCFS/GATK_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/GATK_snvs4
+
+echo "=== Running VarScan SNVs4 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs4/varscan_Abnorm_output_snvs4_filtered.vcf.gz -c $BASE_VCFS/varscan_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/VarScan_snvs4
+
+# SNVs5
+echo "=== Running BCFtools SNVs5 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs5/BCFtools_Abnorm_output_snvs5_filtered.vcf.gz -c $BASE_VCFS/BCFtools_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/BCFtools_snvs5
+
+echo "=== Running DeepVariant SNVs5 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs5/DeepVariant_Abnorm_output_snvs5_filtered.vcf.gz -c $BASE_VCFS/DeepVariant_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/DeepVariant_snvs5
+
+echo "=== Running FreeBayes SNVs5 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs5/FreeBayes_Abnorm_output_snvs5_filtered.vcf.gz -c $BASE_VCFS/FreeBayes_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/FreeBayes_snvs5
+
+echo "=== Running GATK SNVs5 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs5/GATK_Abnorm_output_snvs5_filtered.vcf.gz -c $BASE_VCFS/GATK_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/GATK_snvs5
+
+echo "=== Running VarScan SNVs5 ==="
+rtg vcfeval -b $BASE_TRUTH/abnormal_output_snvs5/varscan_Abnorm_output_snvs5_filtered.vcf.gz -c $BASE_VCFS/varscan_Abnorm_normalized.vcf.gz -t $REF -o $BASE_OUT/VarScan_snvs5
+====================
