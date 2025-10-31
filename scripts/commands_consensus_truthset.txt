@@ -141,7 +141,6 @@ bcftools isec -n +5 -p ../consensus_abnormal_isec5 \
 
 
 
-
 #########################################
 # Manual Commands for Normal Dataset Filtering and abnormal
 # Using normal intersections (3+, 4+, 5+)
@@ -301,7 +300,7 @@ bcftools index "$TRUTHSET_DIR/abnormal_output_snvs5/varscan_Abnorm_output_snvs5_
 
 
 
-# ✅ Create SDF for reference genome
+# Create SDF for reference genome
 rtg format \
   -o /home/work/Desktop/variants/ref_variants/reference.sdf \
   "/media/work/New Volume1/Reference/Reference.fasta"
