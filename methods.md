@@ -710,6 +710,102 @@ echo "Done. Abnormal truth sets are in: $OUTDIR"
 
 
 
+RTG Normal
+
+
+RTG="rtg"
+THREADS=20
+
+SNPS_DIR="/home/work/Desktop/variants/new_latest_all_data/snvs/working/snps"
+TRUTH_DIR="${SNPS_DIR}/truthset/Normal/truthsets"
+REF_SDF="/home/work/Desktop/variants/ref/Reference.sdf"
+OUT_BASE="${SNPS_DIR}/truthset"
+
+declare -A CALLERS
+CALLERS=(
+  [BCF]="$SNPS_DIR/BCF_normal_SNPs.vcf.gz"
+  [Deepvariant]="$SNPS_DIR/Deepvariant_normal_SNPs.vcf.gz"
+  [Freebayes]="$SNPS_DIR/Freebayes_normal_SNPs.vcf.gz"
+  [Gatk]="$SNPS_DIR/Gatk_normal_SNPs.vcf.gz"
+  [Varscan]="$SNPS_DIR/Varscan_normal_SNPs.vcf.gz"
+)
+
+TRUTHSETS=(
+  "truthset_normal_3plus.vcf.gz"
+  "truthset_normal_4plus.vcf.gz"
+  "truthset_normal_5tools.vcf.gz"
+  "truthset_normal_n3.vcf.gz"
+  "truthset_normal_n4.vcf.gz"
+)
+
+SUMMARY_TSV="${OUT_BASE}/vcfeval_normal_summary.tsv"
+echo -e "TruthSet\tTool\tF1" > "$SUMMARY_TSV"
+
+for TS in "${TRUTHSETS[@]}"; do
+  TRUTH_VCF="${TRUTH_DIR}/${TS}"
+  TSHORT="${TS%.vcf.gz}"
+  TSHORT="${TSHORT#truthset_}"
+
+  echo "=== Running Truth Set: $TSHORT ==="
+
+  for TOOL in "${!CALLERS[@]}"; do
+    CALL_VCF="${CALLERS[$TOOL]}"
+    OUT_DIR="${OUT_BASE}/${TOOL}_normal_SNPs_vs_${TSHORT}"
+    SUMMARY="${OUT_DIR}/summary.txt"
+
+    # CASE 1: Folder + summary exist → already done, just read F1
+    if [[ -d "$OUT_DIR" && -f "$SUMMARY" ]]; then
+      F=$(grep -i "F-measure" "$SUMMARY" | awk '{print $NF}')
+      echo "Skipping (already done): $TOOL vs $TSHORT (F1=$F)"
+      echo -e "${TSHORT}\t${TOOL}\t${F}" >> "$SUMMARY_TSV"
+      continue
+    fi
+
+    # CASE 2: Folder exists but no summary → delete and rerun
+    if [[ -d "$OUT_DIR" && ! -f "$SUMMARY" ]]; then
+      echo "Removing incomplete folder: $OUT_DIR"
+      rm -rf "$OUT_DIR"
+    fi
+
+    # CASE 3: Run vcfeval (IMPORTANT: DO NOT mkdir OUT_DIR HERE)
+    echo "Running: $TOOL vs $TSHORT"
+
+    $RTG vcfeval \
+      -b "$TRUTH_VCF" \
+      -c "$CALL_VCF" \
+      -t "$REF_SDF" \
+      -o "$OUT_DIR" \
+      --vcf-score-field QUAL \
+      -T "$THREADS"
+
+    if [[ -f "$SUMMARY" ]]; then
+      F=$(grep -i "F-measure" "$SUMMARY" | awk '{print $NF}')
+    else
+      F="NA"
+    fi
+
+    echo -e "${TSHORT}\t${TOOL}\t${F}" >> "$SUMMARY_TSV"
+    echo "$TOOL vs $TSHORT → F1 = $F"
+  done
+done
+
+echo "=== DONE ==="
+echo "Summary file: $SUMMARY_TSV"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
