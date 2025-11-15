@@ -402,99 +402,297 @@ python venn_analysis/discordance_analysis.py
 
 
 
-
-
-
-
-
-
-
 #!/bin/bash
+
+# ===============================
+# SETTINGS
+# ===============================
+THREADS=60
+WORKDIR="/home/work/Desktop/variants/new_latest_all_data/snvs/working/snps"
+
+cd "$WORKDIR"
+
+echo "Running bcftools isec in: $WORKDIR"
+echo "Threads: $THREADS"
+echo "--------------------------------------"
+
+# ===============================
+# FILE LISTS
+# ===============================
+
+NORMAL_FILES=(
+  BCF_normal_SNPs.vcf.gz
+  Deepvariant_normal_SNPs.vcf.gz
+  Freebayes_normal_SNPs.vcf.gz
+  Gatk_normal_SNPs.vcf.gz
+  Varscan_normal_SNPs.vcf.gz
+)
+
+ABNORMAL_FILES=(
+  BCF_abnormal_SNPs.vcf.gz
+  Deepvariant_abnormal_SNPs.vcf.gz
+  Freebayes_abnormal_SNPs.vcf.gz
+  Gatk_abnormal_SNPs.vcf.gz
+  Varscan_abnormal_SNPs.vcf.gz
+)
+
+# ===============================
+# FUNCTION TO RUN ISEC
+# ===============================
+run_isec() {
+    LABEL=$1        # normal / abnormal
+    N_OPTION=$2     # =3, +3, =4, +4, =5
+    OUT_PREFIX=$3   # output folder name
+    shift 3         
+
+    FILES=("$@")
+
+    echo "Running $LABEL intersection $N_OPTION → $OUT_PREFIX"
+
+    bcftools isec \
+        --threads $THREADS \
+        -n "$N_OPTION" \
+        -p "$OUT_PREFIX" \
+        "${FILES[@]}"
+
+    echo "Done: $OUT_PREFIX"
+    echo "--------------------------------------"
+}
+
+# ===============================
+# NORMAL DATASET
+# ===============================
+
+run_isec "NORMAL" "=3"  "isec_normal_n3"      "${NORMAL_FILES[@]}"
+run_isec "NORMAL" "+3"  "isec_normal_n3plus"  "${NORMAL_FILES[@]}"
+run_isec "NORMAL" "=4"  "isec_normal_n4"      "${NORMAL_FILES[@]}"
+run_isec "NORMAL" "+4"  "isec_normal_n4plus"  "${NORMAL_FILES[@]}"
+run_isec "NORMAL" "=5"  "isec_normal_n5"      "${NORMAL_FILES[@]}"
+
+# ===============================
+# ABNORMAL DATASET
+# ===============================
+
+run_isec "ABNORMAL" "=3"  "isec_abnormal_n3"      "${ABNORMAL_FILES[@]}"
+run_isec "ABNORMAL" "+3"  "isec_abnormal_n3plus"  "${ABNORMAL_FILES[@]}"
+run_isec "ABNORMAL" "=4"  "isec_abnormal_n4"      "${ABNORMAL_FILES[@]}"
+run_isec "ABNORMAL" "+4"  "isec_abnormal_n4plus"  "${ABNORMAL_FILES[@]}"
+run_isec "ABNORMAL" "=5"  "isec_abnormal_n5"      "${ABNORMAL_FILES[@]}"
+
+echo "✨ ALL INTERSECTIONS COMPLETED SUCCESSFULLY ✨"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===================================Truthset=====================================================
+
+#!/usr/bin/env bash
 set -euo pipefail
 
-BASE="/home/work/Desktop/variants/new_latest_all_data/snvs/working"
-THREADS=16   # adjust if you want
+# Number of threads for bcftools
+THREADS=40   # change to 20, 60, etc. if you want
 
-cd "$BASE" || { echo "Cannot cd to $BASE"; exit 1; }
+# Base directory where your SNP VCFs live
+BASE="/home/work/Desktop/variants/new_latest_all_data/snvs/working/snps"
 
-mkdir -p truthsets
+# Normal truthset directory (where isec_normal_* are)
+NORMDIR="$BASE/truthset/Normal"
 
-echo "=== Building SNP truth sets (NORMAL) ==="
+# Normal BCF VCF (used to extract full variant records)
+BCF_NORMAL="$BASE/BCF_normal_SNPs.vcf.gz"
 
-# NORMAL SNPs: BCF, DeepVariant, FreeBayes, GATK, VarScan
-NSNP=(
-  snps/BCF_normal_SNPs.vcf.gz
-  snps/Deepvariant_normal_SNPs.vcf.gz
-  snps/Freebayes_normal_SNPs.vcf.gz
-  snps/Gatk_normal_SNPs.vcf.gz
-  snps/Varscan_normal_SNPs.vcf.gz
-)
+# Output directory for final truth-set VCFs
+OUTDIR="$NORMDIR/truthsets"
+mkdir -p "$OUTDIR"
 
-# exactly 3
-bcftools isec -n =3 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_normal_SNPs_3.vcf.gz "${NSNP[@]}"
-tabix -p vcf truthsets/truth_normal_SNPs_3.vcf.gz
+echo "Using base VCF: $BCF_NORMAL"
+echo "Writing truth sets to: $OUTDIR"
+echo "Using $THREADS threads"
+echo
 
-# ≥3
-bcftools isec -n +3 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_normal_SNPs_3plus.vcf.gz "${NSNP[@]}"
-tabix -p vcf truthsets/truth_normal_SNPs_3plus.vcf.gz
+############################
+# 1) Exact n=3 consensus
+############################
+if [ -f "$NORMDIR/isec_normal_n3/sites.txt" ]; then
+  echo "Creating truthset_normal_n3.vcf.gz (n=3 exact)..."
+  bcftools view --threads $THREADS \
+    -R "$NORMDIR/isec_normal_n3/sites.txt" \
+    "$BCF_NORMAL" -Oz \
+    -o "$OUTDIR/truthset_normal_n3.vcf.gz"
 
-# exactly 4
-bcftools isec -n =4 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_normal_SNPs_4.vcf.gz "${NSNP[@]}"
-tabix -p vcf truthsets/truth_normal_SNPs_4.vcf.gz
+  bcftools index --threads $THREADS "$OUTDIR/truthset_normal_n3.vcf.gz"
+fi
 
-# ≥4
-bcftools isec -n +4 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_normal_SNPs_4plus.vcf.gz "${NSNP[@]}"
-tabix -p vcf truthsets/truth_normal_SNPs_4plus.vcf.gz
+############################
+# 2) n>=3 (3-plus) consensus
+############################
+if [ -f "$NORMDIR/isec_normal_n3plus/sites.txt" ]; then
+  echo "Creating truthset_normal_3plus.vcf.gz (n>=3)..."
+  bcftools view --threads $THREADS \
+    -R "$NORMDIR/isec_normal_n3plus/sites.txt" \
+    "$BCF_NORMAL" -Oz \
+    -o "$OUTDIR/truthset_normal_3plus.vcf.gz"
 
-# all 5
-bcftools isec -n =5 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_normal_SNPs_5.vcf.gz "${NSNP[@]}"
-tabix -p vcf truthsets/truth_normal_SNPs_5.vcf.gz
+  bcftools index --threads $THREADS "$OUTDIR/truthset_normal_3plus.vcf.gz"
+fi
 
-echo "=== Building SNP truth sets (ABNORMAL) ==="
+############################
+# 3) Exact n=4 consensus
+############################
+if [ -f "$NORMDIR/isec_normal_n4/sites.txt" ]; then
+  echo "Creating truthset_normal_n4.vcf.gz (n=4 exact)..."
+  bcftools view --threads $THREADS \
+    -R "$NORMDIR/isec_normal_n4/sites.txt" \
+    "$BCF_NORMAL" -Oz \
+    -o "$OUTDIR/truthset_normal_n4.vcf.gz"
 
-ASNP=(
-  snps/BCF_abnormal_SNPs.vcf.gz
-  snps/Deepvariant_abnormal_SNPs.vcf.gz
-  snps/Freebayes_abnormal_SNPs.vcf.gz
-  snps/Gatk_abnormal_SNPs.vcf.gz
-  snps/Varscan_abnormal_SNPs.vcf.gz
-)
+  bcftools index --threads $THREADS "$OUTDIR/truthset_normal_n4.vcf.gz"
+fi
 
-# exactly 3
-bcftools isec -n =3 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_abnormal_SNPs_3.vcf.gz "${ASNP[@]}"
-tabix -p vcf truthsets/truth_abnormal_SNPs_3.vcf.gz
+############################
+# 4) n>=4 (4-plus) consensus
+############################
+if [ -f "$NORMDIR/isec_normal_n4plus/sites.txt" ]; then
+  echo "Creating truthset_normal_4plus.vcf.gz (n>=4)..."
+  bcftools view --threads $THREADS \
+    -R "$NORMDIR/isec_normal_n4plus/sites.txt" \
+    "$BCF_NORMAL" -Oz \
+    -o "$OUTDIR/truthset_normal_4plus.vcf.gz"
 
-# ≥3
-bcftools isec -n +3 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_abnormal_SNPs_3plus.vcf.gz "${ASNP[@]}"
-tabix -p vcf truthsets/truth_abnormal_SNPs_3plus.vcf.gz
+  bcftools index --threads $THREADS "$OUTDIR/truthset_normal_4plus.vcf.gz"
+fi
 
-# exactly 4
-bcftools isec -n =4 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_abnormal_SNPs_4.vcf.gz "${ASNP[@]}"
-tabix -p vcf truthsets/truth_abnormal_SNPs_4.vcf.gz
+############################
+# 5) Exact n=5 consensus (all tools)
+############################
+if [ -f "$NORMDIR/isec_normal_n5/sites.txt" ]; then
+  echo "Creating truthset_normal_5tools.vcf.gz (n=5, all callers)..."
+  bcftools view --threads $THREADS \
+    -R "$NORMDIR/isec_normal_n5/sites.txt" \
+    "$BCF_NORMAL" -Oz \
+    -o "$OUTDIR/truthset_normal_5tools.vcf.gz"
 
-# ≥4
-bcftools isec -n +4 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_abnormal_SNPs_4plus.vcf.gz "${ASNP[@]}"
-tabix -p vcf truthsets/truth_abnormal_SNPs_4plus.vcf.gz
+  bcftools index --threads $THREADS "$OUTDIR/truthset_normal_5tools.vcf.gz"
+fi
 
-# all 5
-bcftools isec -n =5 -w1 -Oz -@ "$THREADS" \
-  -o truthsets/truth_abnormal_SNPs_5.vcf.gz "${ASNP[@]}"
-tabix -p vcf truthsets/truth_abnormal_SNPs_5.vcf.gz
-
-echo "All SNP truth sets created in $BASE/truthsets"
+echo
+echo "Done. Final truth sets are in: $OUTDIR"
 
 
 
 
+
+abnoraml
+
+
+
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Number of threads for bcftools
+THREADS=40   # change if you want
+
+# Base directory where your SNP VCFs live
+BASE="/home/work/Desktop/variants/new_latest_all_data/snvs/working/snps"
+
+# Abnormal truthset directory (where isec_abnormal_* are)
+ABDIR="$BASE/truthset/abnormal"
+
+# Abnormal BCF VCF (used to extract full variant records)
+BCF_ABNORMAL="$BASE/BCF_abnormal_SNPs.vcf.gz"
+
+# Output directory for final truth-set VCFs
+OUTDIR="$ABDIR/truthsets"
+mkdir -p "$OUTDIR"
+
+echo "Using base VCF: $BCF_ABNORMAL"
+echo "Writing abnormal truth sets to: $OUTDIR"
+echo "Using $THREADS threads"
+echo
+
+############################
+# 1) Exact n=3 consensus
+############################
+if [ -f "$ABDIR/isec_abnormal_n3/sites.txt" ]; then
+  echo "Creating truthset_abnormal_n3.vcf.gz (n=3 exact)..."
+  bcftools view --threads $THREADS \
+    -R "$ABDIR/isec_abnormal_n3/sites.txt" \
+    "$BCF_ABNORMAL" -Oz \
+    -o "$OUTDIR/truthset_abnormal_n3.vcf.gz"
+
+  bcftools index --threads $THREADS "$OUTDIR/truthset_abnormal_n3.vcf.gz"
+fi
+
+############################
+# 2) n>=3 (3-plus) consensus
+############################
+if [ -f "$ABDIR/isec_abnormal_n3plus/sites.txt" ]; then
+  echo "Creating truthset_abnormal_3plus.vcf.gz (n>=3)..."
+  bcftools view --threads $THREADS \
+    -R "$ABDIR/isec_abnormal_n3plus/sites.txt" \
+    "$BCF_ABNORMAL" -Oz \
+    -o "$OUTDIR/truthset_abnormal_3plus.vcf.gz"
+
+  bcftools index --threads $THREADS "$OUTDIR/truthset_abnormal_3plus.vcf.gz"
+fi
+
+############################
+# 3) Exact n=4 consensus
+############################
+if [ -f "$ABDIR/isec_abnormal_n4/sites.txt" ]; then
+  echo "Creating truthset_abnormal_n4.vcf.gz (n=4 exact)..."
+  bcftools view --threads $THREADS \
+    -R "$ABDIR/isec_abnormal_n4/sites.txt" \
+    "$BCF_ABNORMAL" -Oz \
+    -o "$OUTDIR/truthset_abnormal_n4.vcf.gz"
+
+  bcftools index --threads $THREADS "$OUTDIR/truthset_abnormal_n4.vcf.gz"
+fi
+
+############################
+# 4) n>=4 (4-plus) consensus
+############################
+if [ -f "$ABDIR/isec_abnormal_n4plus/sites.txt" ]; then
+  echo "Creating truthset_abnormal_4plus.vcf.gz (n>=4)..."
+  bcftools view --threads $THREADS \
+    -R "$ABDIR/isec_abnormal_n4plus/sites.txt" \
+    "$BCF_ABNORMAL" -Oz \
+    -o "$OUTDIR/truthset_abnormal_4plus.vcf.gz"
+
+  bcftools index --threads $THREADS "$OUTDIR/truthset_abnormal_4plus.vcf.gz"
+fi
+
+############################
+# 5) Exact n=5 consensus (all tools)
+############################
+if [ -f "$ABDIR/isec_abnormal_n5/sites.txt" ]; then
+  echo "Creating truthset_abnormal_5tools.vcf.gz (n=5, all callers)..."
+  bcftools view --threads $THREADS \
+    -R "$ABDIR/isec_abnormal_n5/sites.txt" \
+    "$BCF_ABNORMAL" -Oz \
+    -o "$OUTDIR/truthset_abnormal_5tools.vcf.gz"
+
+  bcftools index --threads $THREADS "$OUTDIR/truthset_abnormal_5tools.vcf.gz"
+fi
+
+echo
+echo "Done. Abnormal truth sets are in: $OUTDIR"
 
 
 
