@@ -713,14 +713,26 @@ echo "Done. Abnormal truth sets are in: $OUTDIR"
 RTG Normal
 
 
+#!/usr/bin/env bash
+set -euo pipefail
+
 RTG="rtg"
 THREADS=20
 
+# Base directories
 SNPS_DIR="/home/work/Desktop/variants/new_latest_all_data/snvs/working/snps"
-TRUTH_DIR="${SNPS_DIR}/truthset/Normal/truthsets"
+TRUTH_BASE="$SNPS_DIR/truthset/Normal/truthsets"
+EVAL_ROOT="$SNPS_DIR/truthset/Normal/normal_Tools_evl"
 REF_SDF="/home/work/Desktop/variants/ref/Reference.sdf"
-OUT_BASE="${SNPS_DIR}/truthset"
 
+echo "SNPS_DIR  = $SNPS_DIR"
+echo "TRUTHBASE = $TRUTH_BASE"
+echo "EVAL_ROOT = $EVAL_ROOT"
+echo "REF_SDF   = $REF_SDF"
+echo "THREADS   = $THREADS"
+echo
+
+# Normal SNP callsets (only NORMAL files)
 declare -A CALLERS
 CALLERS=(
   [BCF]="$SNPS_DIR/BCF_normal_SNPs.vcf.gz"
@@ -730,47 +742,58 @@ CALLERS=(
   [Varscan]="$SNPS_DIR/Varscan_normal_SNPs.vcf.gz"
 )
 
-TRUTHSETS=(
-  "truthset_normal_3plus.vcf.gz"
-  "truthset_normal_4plus.vcf.gz"
-  "truthset_normal_5tools.vcf.gz"
-  "truthset_normal_n3.vcf.gz"
-  "truthset_normal_n4.vcf.gz"
-)
+# Map truthset VCF -> output group directory name
+# (according to your existing folders)
+declare -A TRUTH_MAP
+TRUTH_MAP["truthset_normal_n3.vcf.gz"]="truthset_normal_3"
+TRUTH_MAP["truthset_normal_n4.vcf.gz"]="truthset_normal_4"
+TRUTH_MAP["truthset_normal_5tools.vcf.gz"]="truthset_normal_5"
+TRUTH_MAP["truthset_normal_3plus.vcf.gz"]="truthset_normal_3plus_evl"
+TRUTH_MAP["truthset_normal_4plus.vcf.gz"]="truthset_normal_4plus"
 
-SUMMARY_TSV="${OUT_BASE}/vcfeval_normal_summary.tsv"
-echo -e "TruthSet\tTool\tF1" > "$SUMMARY_TSV"
+# Optional summary table
+SUMMARY_TSV="$EVAL_ROOT/vcfeval_normal_tools_summary.tsv"
+echo -e "TruthGroup\tTruthVCF\tTool\tF1" > "$SUMMARY_TSV"
 
-for TS in "${TRUTHSETS[@]}"; do
-  TRUTH_VCF="${TRUTH_DIR}/${TS}"
-  TSHORT="${TS%.vcf.gz}"
-  TSHORT="${TSHORT#truthset_}"
+for TSFILE in "${!TRUTH_MAP[@]}"; do
+  TRUTH_VCF="$TRUTH_BASE/$TSFILE"
+  GROUP_DIR="${TRUTH_MAP[$TSFILE]}"
 
-  echo "=== Running Truth Set: $TSHORT ==="
+  if [[ ! -f "$TRUTH_VCF" ]]; then
+    echo "WARNING: Truth VCF not found, skipping: $TRUTH_VCF"
+    continue
+  fi
+
+  GROUP_PATH="$EVAL_ROOT/$GROUP_DIR"
+  mkdir -p "$GROUP_PATH"
+
+  echo "=== Truth set: $TSFILE  -> group: $GROUP_DIR ==="
+
+  # Short label for naming inside group
+  SHORT_LABEL="$TSFILE"
+  SHORT_LABEL="${SHORT_LABEL%.vcf.gz}"      # remove .vcf.gz
+  SHORT_LABEL="${SHORT_LABEL#truthset_normal_}"  # e.g. "n3", "3plus", "5tools"
 
   for TOOL in "${!CALLERS[@]}"; do
     CALL_VCF="${CALLERS[$TOOL]}"
-    OUT_DIR="${OUT_BASE}/${TOOL}_normal_SNPs_vs_${TSHORT}"
-    SUMMARY="${OUT_DIR}/summary.txt"
 
-    # CASE 1: Folder + summary exist → already done, just read F1
-    if [[ -d "$OUT_DIR" && -f "$SUMMARY" ]]; then
-      F=$(grep -i "F-measure" "$SUMMARY" | awk '{print $NF}')
-      echo "Skipping (already done): $TOOL vs $TSHORT (F1=$F)"
-      echo -e "${TSHORT}\t${TOOL}\t${F}" >> "$SUMMARY_TSV"
+    if [[ ! -f "$CALL_VCF" ]]; then
+      echo "  [$TOOL] VCF not found, skipping: $CALL_VCF"
       continue
     fi
 
-    # CASE 2: Folder exists but no summary → delete and rerun
-    if [[ -d "$OUT_DIR" && ! -f "$SUMMARY" ]]; then
-      echo "Removing incomplete folder: $OUT_DIR"
+    OUT_DIR="${GROUP_PATH}/${TOOL}_normal_SNPs_vs_${SHORT_LABEL}"
+    SUMMARY_FILE="${OUT_DIR}/summary.txt"
+
+    # Always ensure RTG can create this directory fresh
+    if [[ -d "$OUT_DIR" ]]; then
+      echo "  Deleting previous directory: $OUT_DIR"
       rm -rf "$OUT_DIR"
     fi
 
-    # CASE 3: Run vcfeval (IMPORTANT: DO NOT mkdir OUT_DIR HERE)
-    echo "Running: $TOOL vs $TSHORT"
+    echo "  Running: $TOOL vs $TSFILE  (-> $OUT_DIR)"
 
-    $RTG vcfeval \
+    "$RTG" vcfeval \
       -b "$TRUTH_VCF" \
       -c "$CALL_VCF" \
       -t "$REF_SDF" \
@@ -778,22 +801,97 @@ for TS in "${TRUTHSETS[@]}"; do
       --vcf-score-field QUAL \
       -T "$THREADS"
 
-    if [[ -f "$SUMMARY" ]]; then
-      F=$(grep -i "F-measure" "$SUMMARY" | awk '{print $NF}')
+    # Get F1 from summary if present
+    if [[ -f "$SUMMARY_FILE" ]]; then
+      F=$(grep -i "F-measure" "$SUMMARY_FILE" | awk '{print $NF}')
     else
       F="NA"
     fi
 
-    echo -e "${TSHORT}\t${TOOL}\t${F}" >> "$SUMMARY_TSV"
-    echo "$TOOL vs $TSHORT → F1 = $F"
+    echo "    $TOOL vs $SHORT_LABEL → F1 = $F"
+    echo -e "${GROUP_DIR}\t${TSFILE}\t${TOOL}\t${F}" >> "$SUMMARY_TSV"
   done
+
+  echo
 done
 
-echo "=== DONE ==="
-echo "Summary file: $SUMMARY_TSV"
+echo "=== DONE: all normal tools × truthsets evaluated ==="
+echo "Summary table: $SUMMARY_TSV"
 
 
 
+Normal
+
+
+TruthSet                   Tool        Sample   Threshold   TP_baseline   TP_call      FP         FN        Precision   Recall    F1
+-------------------------------------------------------------------------------------------------------------------------------------------
+truthset_normal_3plus_evl  BCF         normal   33.428      12195246      12195246     270558     84230     0.9783      0.9931    0.9857
+truthset_normal_3plus_evl  Deepvariant normal   3           11694873      11694873     361946     584603    0.9700      0.9524    0.9611
+truthset_normal_3plus_evl  Freebayes   normal   0.928       10768627      10648284     200419     1510850   0.9815      0.8770    0.9263
+truthset_normal_3plus_evl  Gatk        normal   150.96      11974390      11974388     428065     305064    0.9655      0.9752    0.9703
+truthset_normal_3plus_evl  Varscan     normal   None        11857136      11857136     371851     422340    0.9696      0.9656    0.9676
+
+truthset_normal_3          BCF         normal   3.011       509267        509267       12168941   0         0.0402      1.0000    0.0772
+truthset_normal_3          Deepvariant normal   3           218153        218153       11838666   291114    0.0181      0.4284    0.0347
+truthset_normal_3          Freebayes   normal   0           163370        160847       10886070   345897    0.0146      0.3208    0.0279
+truthset_normal_3          Gatk        normal   3136.64     17846         17846        141748     491404    0.1118      0.0350    0.0534
+truthset_normal_3          Varscan     normal   None        251273        251273       11977714   257994    0.0205      0.4934    0.0395
+
+truthset_normal_4          BCF         normal   20.445      1751902       1751902      10794275   14096     0.1396      0.9920    0.2448
+truthset_normal_4          Deepvariant normal   3           1523355       1523355      10533464   242643    0.1263      0.8626    0.2204
+truthset_normal_4          Freebayes   normal   0.001       637189        529892       10359020   1128809   0.0487      0.3608    0.0858
+truthset_normal_4          Gatk        normal   166.64      1687559       1687559      10675586   78434     0.1365      0.9556    0.2389
+truthset_normal_4          Varscan     normal   None        1646830       1646830      10582157   119168    0.1347      0.9325    0.2353
+
+truthset_normal_4plus      BCF         normal   95.687      11608781      11608781     462591     161428    0.9617      0.9863    0.9738
+truthset_normal_4plus      Deepvariant normal   3           11476730      11476730     580089     293479    0.9519      0.9751    0.9633
+truthset_normal_4plus      Freebayes   normal   43.688      10599259      10491962     285902     1170950   0.9735      0.9005    0.9356
+truthset_normal_4plus      Gatk        normal   256.6       11585348      11585348     582998     184856    0.9521      0.9843    0.9679
+truthset_normal_4plus      Varscan     normal   None        11605863      11605863     623124     164346    0.9490      0.9860    0.9672
+
+truthset_normal_5          BCF         normal   168.594     9761890       9761890      1737322    242321    0.8489      0.9758    0.9079
+truthset_normal_5          Deepvariant normal   20.1        9666696       9666696      1587453    337515    0.8589      0.9663    0.9094
+truthset_normal_5          Freebayes   normal   126.815     9934140       9934140      714631     70071     0.9329      0.9930    0.9620
+truthset_normal_5          Gatk        normal   352.59      9848301       9848301      2109637    155910    0.8236      0.9844    0.8968
+truthset_normal_5          Varscan     normal   None        9959033       9959033      2269954    45178     0.8144      0.9955    0.8959
+
+
+
+
+
+
+Abnormal
+
+TruthSet                 Tool         Sample    Threshold  TP_baseline  TP_call   FP        FN       Precision  Recall  F1
+truthset_abnormal_3plus  BCF          abnormal  34.422     12233924     12233924  276799    85682    0.9779     0.9930  0.9854
+truthset_abnormal_3plus  Deepvariant  abnormal  3.000      11739974     11739974  361486    579632   0.9701     0.9530  0.9615
+truthset_abnormal_3plus  Freebayes    abnormal  0.460      10805360     10684305  203593    1514246  0.9813     0.8771  0.9263
+truthset_abnormal_3plus  Gatk         abnormal  159.920    12007071     12007071  415312    312535   0.9666     0.9746  0.9706
+truthset_abnormal_3plus  Varscan      abnormal  None       11906348     11906348  382126    413258   0.9689     0.9665  0.9677
+
+truthset_abnormal_n3     BCF          abnormal  3.011      504511       504511    12221634  0        0.0396     1.0000  0.0763
+truthset_abnormal_n3     Deepvariant  abnormal  3.000      214660       214660    11886800  289851   0.0177     0.4255  0.0341
+truthset_abnormal_n3     Freebayes    abnormal  0.000      165184       162678    10919667  339327   0.0147     0.3274  0.0281
+truthset_abnormal_n3     Gatk         abnormal  30.010     337488       337488    12326426  167023   0.0266     0.6689  0.0513
+truthset_abnormal_n3     Varscan      abnormal  None       252048       252048    12036426  252463   0.0205     0.4996  0.0394
+
+truthset_abnormal_4      BCF          abnormal  20.580     1734726      1734726   10859815  13555    0.1377     0.9922  0.2419
+truthset_abnormal_4      Deepvariant  abnormal  3.000      1511725      1511725   10589735  236556   0.1249     0.8647  0.2183
+truthset_abnormal_4      Freebayes    abnormal  0.001      609253       500646    10423014  1139028  0.0458     0.3485  0.0810
+truthset_abnormal_4      Gatk         abnormal  169.040    1670223      1670223   10729639  78058    0.1347     0.9554  0.2361
+truthset_abnormal_4      Varscan      abnormal  None       1632794      1632794   10655680  115487   0.1329     0.9339  0.2326
+
+truthset_abnormal_4plus  BCF          abnormal  100.713    11651888     11651888  452902    163207   0.9626     0.9862  0.9742
+truthset_abnormal_4plus  Deepvariant  abnormal  3.000      11525327     11525327  576133    289768   0.9524     0.9755  0.9638
+truthset_abnormal_4plus  Freebayes    abnormal  50.580     10631857     10523252  282582    1183238  0.9738     0.8999  0.9354
+truthset_abnormal_4plus  Gatk         abnormal  301.510    11612431     11612431  530930    202664   0.9563     0.9828  0.9694
+truthset_abnormal_4plus  Varscan      abnormal  None       11654300     11654300  634174    160795   0.9484     0.9864  0.9670
+
+truthset_abnormal_5      BCF          abnormal  192.826    9767405      9767405   1616004   299409   0.8580     0.9703  0.9107
+truthset_abnormal_5      Deepvariant  abnormal  20.000     9700828      9700828   1562013   365986   0.8613     0.9636  0.9096
+truthset_abnormal_5      Freebayes    abnormal  159.148    9985919      9985919   665028    80895    0.9376     0.9920  0.9640
+truthset_abnormal_5      Gatk         abnormal  391.640    9913465      9913465   2052019   153349   0.8285     0.9848  0.8999
+truthset_abnormal_5      Varscan      abnormal  None       10021506     10021506  2266968   45308    0.8155     0.9955  0.8966
 
 
 
