@@ -356,6 +356,192 @@ Varscan_normal_SNPs        Varscan_normal_SNPs             1.000000
 
 
 
+Table X. Missed and Unique SNPs Identified by Variant Calling Tools
+(Normal Chelonia mydas Dataset; Missed SNPs computed vs 5-tool UNION)
+
+---------------------------------------------------------------------------
+Tool           Missed_SNPs_Normal_vsUnion        Unique_SNPs_Normal
+---------------------------------------------------------------------------
+DeepVariant            1,527,287                       47,742
+
+GATK                     956,407                      169,758
+
+FreeBayes              2,338,269                      373,302
+
+VarScan                1,357,193                       52,314
+
+BCFTools                 907,971                       88,735
+---------------------------------------------------------------------------
+code for above 
+
+# ----------------------------
+# NORMAL SNPs: Unique + Missed (vs 5-tool UNION)
+# Input: BED files (chr, start, end)
+# ----------------------------
+
+library(data.table)
+
+# BED -> SNP key (chr:pos)
+# NOTE: BED is 0-based. SNP position in 1-based = start + 1
+read_snps_from_bed <- function(bed_file){
+  x <- fread(bed_file, header = FALSE, data.table = FALSE)
+  colnames(x)[1:3] <- c("CHROM","START","END")
+  x$POS <- x$START + 1
+  key <- paste0(x$CHROM, ":", x$POS)
+  unique(key)
+}
+
+# File mapping (NORMAL)
+files <- c(
+  DeepVariant = "Deepvariant_normal_SNPs.bed",
+  GATK        = "Gatk_normal_SNPs.bed",
+  FreeBayes   = "Freebayes_normal_SNPs.bed",
+  VarScan     = "Varscan_normal_SNPs.bed",
+  BCFTools    = "BCF_normal_SNPs.bed"
+)
+
+tools <- names(files)
+
+# Load SNP sets
+sets <- lapply(files, read_snps_from_bed)
+
+# UNION of all 5 tools
+union_all <- unique(unlist(sets))
+
+# Unique SNPs: present in tool, absent in all other tools
+unique_counts <- sapply(tools, function(t){
+  mine <- sets[[t]]
+  others <- unique(unlist(sets[setdiff(tools, t)]))
+  length(setdiff(mine, others))
+})
+
+# Missed SNPs (vs UNION): present in union, missing from tool
+missed_counts <- sapply(tools, function(t){
+  mine <- sets[[t]]
+  length(setdiff(union_all, mine))
+})
+
+# Build Table (NORMAL only)
+table_normal <- data.frame(
+  Tool = tools,
+  Missed_SNPs_Normal_vsUnion = as.integer(missed_counts[tools]),
+  Unique_SNPs_Normal         = as.integer(unique_counts[tools]),
+  stringsAsFactors = FALSE
+)
+
+# Print nicely
+print(table_normal)
+
+# Save as TSV for Notepad / Excel
+write.table(table_normal,
+            file = "Table2_Normal_Missed_Unique.tsv",
+            sep = "\t", quote = FALSE, row.names = FALSE)
+
+cat("\nSaved: Table2_Normal_Missed_Unique.tsv\n")
+
+
+Table X. Missed and Unique SNPs Identified by Variant Calling Tools
+(Abnormal Chelonia mydas Dataset; Missed SNPs computed vs 5-tool UNION)
+
+---------------------------------------------------------------------------
+Tool           Missed_SNPs_Abnormal_vsUnion      Unique_SNPs_Abnormal
+---------------------------------------------------------------------------
+DeepVariant            1,536,593                       47,695
+
+GATK                     976,128                      171,876
+
+FreeBayes              2,339,478                      378,062
+
+VarScan                1,351,570                       54,621
+
+BCFTools                 913,899                       89,374
+---------------------------------------------------------------------------
+
+above code 
+
+
+# -----------------------------------------
+# ABNORMAL SNPs: Missed + Unique (vs UNION)
+# -----------------------------------------
+
+library(data.table)
+
+# BED -> SNP key (chr:pos)
+read_snps_from_bed <- function(bed_file){
+  x <- fread(bed_file, header = FALSE, data.table = FALSE)
+  colnames(x)[1:3] <- c("CHROM","START","END")
+  x$POS <- x$START + 1   # BED is 0-based
+  key <- paste0(x$CHROM, ":", x$POS)
+  unique(key)
+}
+
+# File mapping (ABNORMAL)
+files_abnormal <- c(
+  DeepVariant = "Deepvariant_abnormal_SNPs.bed",
+  GATK        = "Gatk_abnormal_SNPs.bed",
+  FreeBayes   = "Freebayes_abnormal_SNPs.bed",
+  VarScan     = "Varscan_abnormal_SNPs.bed",
+  BCFTools    = "BCF_abnormal_SNPs.bed"
+)
+
+tools <- names(files_abnormal)
+
+# Load SNP sets
+sets_abnormal <- lapply(files_abnormal, read_snps_from_bed)
+
+# UNION of all 5 callers
+union_abnormal <- unique(unlist(sets_abnormal))
+
+# Unique SNPs (ABNORMAL)
+unique_counts_abnormal <- sapply(tools, function(t){
+  mine <- sets_abnormal[[t]]
+  others <- unique(unlist(sets_abnormal[setdiff(tools, t)]))
+  length(setdiff(mine, others))
+})
+
+# Missed SNPs vs UNION (ABNORMAL)
+missed_counts_abnormal <- sapply(tools, function(t){
+  mine <- sets_abnormal[[t]]
+  length(setdiff(union_abnormal, mine))
+})
+
+# Build results table
+table_abnormal <- data.frame(
+  Tool = tools,
+  Missed_SNPs_Abnormal_vsUnion = as.integer(missed_counts_abnormal[tools]),
+  Unique_SNPs_Abnormal         = as.integer(unique_counts_abnormal[tools]),
+  stringsAsFactors = FALSE
+)
+
+# Print results
+print(table_abnormal)
+
+# Save for Notepad / Excel
+write.table(table_abnormal,
+            file = "Table2_Abnormal_Missed_Unique.tsv",
+            sep = "\t", quote = FALSE, row.names = FALSE)
+
+cat("\nSaved: Table2_Abnormal_Missed_Unique.tsv\n")
+
+
+Table 2. Missed and Unique SNPs Identified by Variant Calling Tools in Chelonia mydas
+
+-----------------------------------------------------------------------------------------
+Tool         Missed SNPs        Unique SNPs        Missed SNPs        Unique SNPs
+             (Abnormal)         (Abnormal)         (Normal)           (Normal)
+-----------------------------------------------------------------------------------------
+DeepVariant     1,536,593           47,695           1,527,287           47,742
+
+GATK              976,128          171,876             956,407          169,758
+
+FreeBayes       2,339,478          378,062           2,338,269          373,302
+
+VarScan         1,351,570           54,621           1,357,193           52,314
+
+BCFTools          913,899           89,374             907,971           88,735
+-----------------------------------------------------------------------------------------
+
+
 ----------------------------------------------------------------------------------------------------------Jaccard similarity abnormal SNPs
 In the abnormal dataset, SNP-level Jaccard similarities followed a pattern similar to the normal sample. DeepVariant, GATK, BCFtools and VarScan again demonstrated strong mutual overlap, whereas FreeBayes maintained moderate similarity values. The abnormal sample displayed slightly reduced inter-caller similarity compared to the normal dataset, likely reflecting biological differences or coverage variation, but overall SNP concordance remained high
 
@@ -398,6 +584,12 @@ Varscan_abnormal_SNPs       Deepvariant_abnormal_SNPs        0.929124
 Varscan_abnormal_SNPs       Freebayes_abnormal_SNPs          0.804360
 Varscan_abnormal_SNPs       Gatk_abnormal_SNPs               0.919892
 Varscan_abnormal_SNPs       Varscan_abnormal_SNPs            1.000000
+
+
+
+
+
+
 
 
 
