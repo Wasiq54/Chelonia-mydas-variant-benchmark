@@ -318,12 +318,90 @@ command
 
 https://github.com/Wasiq54/Chelonia-mydas-variant-benchmark/blob/main/scripts/normal_snp_jaccard.sh
 
+
+
+
+ToolA                      ToolB                           Jaccard
+--------------------------------------------------------------------
+BCF_normal_SNPs            BCF_normal_SNPs                 1.000000
+BCF_normal_SNPs            Deepvariant_normal_SNPs         0.930868
+BCF_normal_SNPs            Freebayes_normal_SNPs           0.803898
+BCF_normal_SNPs            Gatk_normal_SNPs                0.937860
+BCF_normal_SNPs            Varscan_normal_SNPs             0.943323
+
+Deepvariant_normal_SNPs    BCF_normal_SNPs                 0.930868
+Deepvariant_normal_SNPs    Deepvariant_normal_SNPs         1.000000
+Deepvariant_normal_SNPs    Freebayes_normal_SNPs           0.786252
+Deepvariant_normal_SNPs    Gatk_normal_SNPs                0.918006
+Deepvariant_normal_SNPs    Varscan_normal_SNPs             0.928128
+
+Freebayes_normal_SNPs      BCF_normal_SNPs                 0.803898
+Freebayes_normal_SNPs      Deepvariant_normal_SNPs         0.786252
+Freebayes_normal_SNPs      Freebayes_normal_SNPs           1.000000
+Freebayes_normal_SNPs      Gatk_normal_SNPs                0.809775
+Freebayes_normal_SNPs      Varscan_normal_SNPs             0.804201
+
+Gatk_normal_SNPs           BCF_normal_SNPs                 0.937860
+Gatk_normal_SNPs           Deepvariant_normal_SNPs         0.918006
+Gatk_normal_SNPs           Freebayes_normal_SNPs           0.809775
+Gatk_normal_SNPs           Gatk_normal_SNPs                1.000000
+Gatk_normal_SNPs           Varscan_normal_SNPs             0.920129
+
+Varscan_normal_SNPs        BCF_normal_SNPs                 0.943323
+Varscan_normal_SNPs        Deepvariant_normal_SNPs         0.928128
+Varscan_normal_SNPs        Freebayes_normal_SNPs           0.804201
+Varscan_normal_SNPs        Gatk_normal_SNPs                0.920129
+Varscan_normal_SNPs        Varscan_normal_SNPs             1.000000
+
+
+
+
 ----------------------------------------------------------------------------------------------------------Jaccard similarity abnormal SNPs
 In the abnormal dataset, SNP-level Jaccard similarities followed a pattern similar to the normal sample. DeepVariant, GATK, BCFtools and VarScan again demonstrated strong mutual overlap, whereas FreeBayes maintained moderate similarity values. The abnormal sample displayed slightly reduced inter-caller similarity compared to the normal dataset, likely reflecting biological differences or coverage variation, but overall SNP concordance remained high
 
 command
 
 https://github.com/Wasiq54/Chelonia-mydas-variant-benchmark/blob/main/scripts/abnormal_snp_jaccard.sh
+
+
+
+
+
+ToolA                       ToolB                            Jaccard
+---------------------------------------------------------------------
+BCF_abnormal_SNPs           BCF_abnormal_SNPs                1.000000
+BCF_abnormal_SNPs           Deepvariant_abnormal_SNPs        0.931014
+BCF_abnormal_SNPs           Freebayes_abnormal_SNPs          0.804477
+BCF_abnormal_SNPs           Gatk_abnormal_SNPs               0.937287
+BCF_abnormal_SNPs           Varscan_abnormal_SNPs            0.944160
+
+Deepvariant_abnormal_SNPs   BCF_abnormal_SNPs                0.931014
+Deepvariant_abnormal_SNPs   Deepvariant_abnormal_SNPs        1.000000
+Deepvariant_abnormal_SNPs   Freebayes_abnormal_SNPs          0.787334
+Deepvariant_abnormal_SNPs   Gatk_abnormal_SNPs               0.918906
+Deepvariant_abnormal_SNPs   Varscan_abnormal_SNPs            0.929124
+
+Freebayes_abnormal_SNPs     BCF_abnormal_SNPs                0.804477
+Freebayes_abnormal_SNPs     Deepvariant_abnormal_SNPs        0.787334
+Freebayes_abnormal_SNPs     Freebayes_abnormal_SNPs          1.000000
+Freebayes_abnormal_SNPs     Gatk_abnormal_SNPs               0.809711
+Freebayes_abnormal_SNPs     Varscan_abnormal_SNPs            0.804360
+
+Gatk_abnormal_SNPs          BCF_abnormal_SNPs                0.937287
+Gatk_abnormal_SNPs          Deepvariant_abnormal_SNPs        0.918906
+Gatk_abnormal_SNPs          Freebayes_abnormal_SNPs          0.809711
+Gatk_abnormal_SNPs          Gatk_abnormal_SNPs               1.000000
+Gatk_abnormal_SNPs          Varscan_abnormal_SNPs            0.919892
+
+Varscan_abnormal_SNPs       BCF_abnormal_SNPs                0.944160
+Varscan_abnormal_SNPs       Deepvariant_abnormal_SNPs        0.929124
+Varscan_abnormal_SNPs       Freebayes_abnormal_SNPs          0.804360
+Varscan_abnormal_SNPs       Gatk_abnormal_SNPs               0.919892
+Varscan_abnormal_SNPs       Varscan_abnormal_SNPs            1.000000
+
+
+
+
 
 ----------------------------------------------------------------------------------------------------------Jaccard similarity Normal Indel
 Jaccard similarity for INDELs in the normal dataset was lower than for SNPs, consistent with known challenges in INDEL calling. DeepVariant and GATK shared the highest INDEL concordance, followed by BCFtools and VarScan, whereas FreeBayes showed the lowest similarity with the other callers. These patterns align with previously reported INDEL-calling inconsistencies across tools.
