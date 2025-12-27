@@ -82,7 +82,51 @@ Mapping quality was evaluated using Samtools flagstat and alignment summary metr
 
 
 
+=======================================
 
+
+
+Sample: Normal (CH-NORMS1)
+--------------------------
+READ_PAIRS_EXAMINED: 436,970,646
+READ_PAIR_DUPLICATES: 37,780,610
+READ_PAIR_OPTICAL_DUPLICATES: 3,774,873 (~10% of duplicate pairs)
+PERCENT_DUPLICATION: 8.67%
+ESTIMATED_LIBRARY_SIZE: 2,612,848,101
+
+Interpretation:
+- Duplication rate is low (under 10%), which is good for downstream variant calling.
+- Library complexity is high (large estimated library size).
+
+Sample: Abnormal (Ab-NormS2)
+----------------------------
+READ_PAIRS_EXAMINED: 432,348,293
+READ_PAIR_DUPLICATES: 19,623,342
+READ_PAIR_OPTICAL_DUPLICATES: 1,501,029 (~7.6% of duplicate pairs)
+PERCENT_DUPLICATION: 4.57%
+ESTIMATED_LIBRARY_SIZE: 4,976,923,540
+
+Interpretation:
+- Duplication rate is very low (~4.6%), which is excellent.
+- Library complexity is extremely high.
+
+Overall Assessment
+------------------
+Both datasets have low duplication and high library complexity, making them suitable for high-quality variant calling.
+The histogram distribution indicates most reads are unique, with minimal large duplicate clusters.
+
+
+
+Tool returned: 0 → Success (exit code 0) for each run.
+
+Elapsed time: ~96.5 minutes → runtime for each BAM.
+
+maxMemory: 32178700288 → Java heap cap was ~32 GB..
+
+
+
+
+==================================
 
 
 
